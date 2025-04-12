@@ -1,260 +1,190 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Grid,
-  Paper,
-  Typography,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   IconButton,
-  Tooltip
+  Typography,
+  Alert
 } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import config from '../config';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
-const API_URL = 'http://localhost:5002/api';
-
-function Produtos() {
+const Produtos = () => {
   const [produtos, setProdutos] = useState([]);
   const [open, setOpen] = useState(false);
-  const [editingProduto, setEditingProduto] = useState(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    preco: '',
-    estoque: '',
-    categoria: ''
-  });
+  const [produtoAtual, setProdutoAtual] = useState({ nome: '', preco: '' });
+  const [loading, setLoading] = useState(false);
+  const { error, handleError, clearError } = useErrorHandler();
 
   useEffect(() => {
-    fetchProdutos();
+    carregarProdutos();
   }, []);
 
-  const fetchProdutos = async () => {
+  const carregarProdutos = async () => {
     try {
-      const response = await axios.get(`${API_URL}/produtos`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      setLoading(true);
+      clearError();
+      const response = await axios.get(`${config.apiUrl}/produtos`);
       setProdutos(response.data);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
-      toast.error('Erro ao carregar produtos');
+      handleError(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleOpen = () => {
-    setEditingProduto(null);
-    setFormData({
-      nome: '',
-      descricao: '',
-      preco: '',
-      estoque: '',
-      categoria: ''
-    });
+  const handleOpen = (produto = null) => {
+    setProdutoAtual(produto || { nome: '', preco: '' });
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setEditingProduto(null);
+    setProdutoAtual({ nome: '', preco: '' });
+    clearError();
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setProdutoAtual(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (editingProduto) {
-        await axios.put(`${API_URL}/produtos/${editingProduto._id}`, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        toast.success('Produto atualizado com sucesso!');
+      setLoading(true);
+      clearError();
+      
+      if (produtoAtual._id) {
+        await axios.put(`${config.apiUrl}/produtos/${produtoAtual._id}`, produtoAtual);
       } else {
-        await axios.post(`${API_URL}/produtos`, formData, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        toast.success('Produto cadastrado com sucesso!');
+        await axios.post(`${config.apiUrl}/produtos`, produtoAtual);
       }
+      
       handleClose();
-      fetchProdutos();
+      carregarProdutos();
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
-      toast.error(error.response?.data?.message || 'Erro ao salvar produto');
+      handleError(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (produto) => {
-    setEditingProduto(produto);
-    setFormData({
-      nome: produto.nome,
-      descricao: produto.descricao,
-      preco: produto.preco,
-      estoque: produto.estoque,
-      categoria: produto.categoria
-    });
-    setOpen(true);
-  };
-
-  const handleDelete = async (produto) => {
-    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
-      try {
-        await axios.delete(`${API_URL}/produtos/${produto._id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        toast.success('Produto excluído com sucesso!');
-        fetchProdutos();
-      } catch (error) {
-        console.error('Erro ao excluir produto:', error);
-        toast.error(error.response?.data?.message || 'Erro ao excluir produto');
-      }
+  const handleDelete = async (id) => {
+    try {
+      setLoading(true);
+      clearError();
+      await axios.delete(`${config.apiUrl}/produtos/${id}`);
+      carregarProdutos();
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      handleError(error);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const columns = [
-    { field: 'nome', headerName: 'Nome', width: 200 },
-    { field: 'descricao', headerName: 'Descrição', width: 300 },
-    { field: 'preco', headerName: 'Preço', width: 130 },
-    { field: 'estoque', headerName: 'Estoque', width: 130 },
-    { field: 'categoria', headerName: 'Categoria', width: 150 },
-    {
-      field: 'acoes',
-      headerName: 'Ações',
-      width: 120,
-      renderCell: (params) => (
-        <Box>
-          <Tooltip title="Editar">
-            <IconButton onClick={() => handleEdit(params.row)}>
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Excluir">
-            <IconButton onClick={() => handleDelete(params.row)}>
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      ),
-    },
-  ];
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4">Produtos</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleOpen}
-          >
-            Novo Produto
-          </Button>
-        </Box>
-      </Grid>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4">Produtos</Typography>
+        <Button variant="contained" color="primary" onClick={() => handleOpen()}>
+          Novo Produto
+        </Button>
+      </Box>
 
-      <Grid item xs={12}>
-        <Paper sx={{ height: 400, width: '100%' }}>
-          <DataGrid
-            rows={produtos}
-            columns={columns}
-            pageSize={5}
-            rowsPerPageOptions={[5]}
-            disableSelectionOnClick
-            getRowId={(row) => row._id}
-          />
-        </Paper>
-      </Grid>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error.message}
+        </Alert>
+      )}
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Nome</TableCell>
+              <TableCell>Preço</TableCell>
+              <TableCell align="right">Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {produtos.map((produto) => (
+              <TableRow key={produto._id}>
+                <TableCell>{produto.nome}</TableCell>
+                <TableCell>R$ {Number(produto.preco).toFixed(2)}</TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => handleOpen(produto)}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(produto._id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>{editingProduto ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                label="Nome"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                fullWidth
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Descrição"
-                name="descricao"
-                multiline
-                rows={2}
-                value={formData.descricao}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Preço"
-                name="preco"
-                type="number"
-                value={formData.preco}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Estoque"
-                name="estoque"
-                type="number"
-                value={formData.estoque}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Categoria"
-                name="categoria"
-                value={formData.categoria}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {editingProduto ? 'Atualizar' : 'Salvar'}
-          </Button>
-        </DialogActions>
+        <DialogTitle>
+          {produtoAtual._id ? 'Editar Produto' : 'Novo Produto'}
+        </DialogTitle>
+        <form onSubmit={handleSubmit}>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              name="nome"
+              label="Nome"
+              type="text"
+              fullWidth
+              value={produtoAtual.nome}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              margin="dense"
+              name="preco"
+              label="Preço"
+              type="number"
+              fullWidth
+              value={produtoAtual.preco}
+              onChange={handleChange}
+              required
+              inputProps={{ step: "0.01" }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Cancelar</Button>
+            <Button type="submit" variant="contained" color="primary" disabled={loading}>
+              {loading ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
-    </Grid>
+    </Box>
   );
-}
+};
 
 export default Produtos; 
