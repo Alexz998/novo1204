@@ -24,15 +24,12 @@ import {
   Receipt as DespesasIcon,
   Inventory as ProdutosIcon,
   Settings as SettingsIcon,
-  Logout as LogoutIcon,
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -47,11 +44,6 @@ const Layout = () => {
     if (isMobile) {
       setMobileOpen(false);
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const menuItems = [
@@ -79,14 +71,6 @@ const Layout = () => {
             </ListItemButton>
           </ListItem>
         ))}
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText primary="Sair" />
-          </ListItemButton>
-        </ListItem>
       </List>
     </div>
   );
@@ -112,7 +96,7 @@ const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Sistema Financeiro
+            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -120,33 +104,30 @@ const Layout = () => {
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
       >
-        {isMobile ? (
-          <Drawer
-            variant="temporary"
-            open={mobileOpen}
-            onClose={handleDrawerToggle}
-            ModalProps={{
-              keepMounted: true,
-            }}
-            sx={{
-              display: { xs: 'block', sm: 'none' },
-              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-            }}
-          >
-            {drawer}
-          </Drawer>
-        ) : (
-          <Drawer
-            variant="permanent"
-            sx={{
-              display: { xs: 'none', sm: 'block' },
-              '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-            }}
-            open
-          >
-            {drawer}
-          </Drawer>
-        )}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true,
+          }}
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+        >
+          {drawer}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+          open
+        >
+          {drawer}
+        </Drawer>
       </Box>
       <Box
         component="main"
@@ -154,9 +135,9 @@ const Layout = () => {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px',
         }}
       >
+        <Toolbar />
         <Outlet />
       </Box>
     </Box>
