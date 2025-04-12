@@ -31,5 +31,15 @@
         "Access-Control-Allow-Origin": "*"
       }
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "client/build/$1"
+    }
   ]
 } 
